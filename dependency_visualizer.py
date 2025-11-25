@@ -91,6 +91,36 @@ def build_dependency_graph(package_name, dependencies, max_depth, filter_substri
     return graph
 
 # ===========================
+# Этап 4: Порядок загрузки зависимостей с проверкой эталона
+# ===========================
+def get_load_order(graph, package_name, expected_order=None):
+    visited = set()
+    order = []
+
+    def dfs(node):
+        if node in visited:
+            return
+        visited.add(node)
+        for dep in graph.get(node, []):
+            dfs(dep)
+        order.append(node)
+
+    dfs(package_name)
+
+    # Вывод порядка загрузки
+    print(f"Порядок загрузки зависимостей для {package_name}: {order}")
+
+    # Сравнение с эталонным порядком (для тестирования)
+    if expected_order:
+        if order == expected_order:
+            print("✅ Порядок совпадает с ожидаемым эталоном.")
+        else:
+            print(f"Расхождение с ожидаемым порядком: {expected_order}")
+            print("   Возможное объяснение: упрощённый алгоритм DFS не учитывает все нюансы реального менеджера пакетов (версии, optional dependencies и features).")
+
+    return order
+
+# ===========================
 # Главная функция
 # ===========================
 def main():
@@ -101,12 +131,17 @@ def main():
         settings["package_version"],
         settings["test_mode"]
     )
-    build_dependency_graph(
+    graph = build_dependency_graph(
         settings["package_name"],
         deps,
         settings["max_depth"],
         settings["filter_substring"]
     )
+
+    # Пример эталонного порядка для тестирования
+    # Для реального репозитория можно оставить None
+    expected_order = ['D', 'B', 'E', 'C', 'A']
+    get_load_order(graph, settings["package_name"], expected_order)
 
 if __name__ == "__main__":
     main()
