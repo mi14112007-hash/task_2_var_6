@@ -1,6 +1,7 @@
 import configparser
 import os
 import sys
+import requests
 
 def load_config():
     config_path = "config.ini"
@@ -30,11 +31,41 @@ def load_config():
 
     return data
 
+
+def fetch_dependencies(package, version, repo_url):
+    url = f"{repo_url}/{package}/{version}/dependencies"
+    print(f"🔗 Запрос: {url}")
+
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+
+        deps = []
+        for dep in data.get("dependencies", []):
+            if dep.get("kind") == "normal":  # runtime-deps only
+                deps.append(dep["crate_id"])
+
+        return deps
+
+    except Exception as e:
+        print(f"❌ Ошибка при получении зависимостей: {e}")
+        return []
+
+
 def main():
     cfg = load_config()
-    print("=== Конфигурация (Этап 1) ===")
-    for key, value in cfg.items():
-        print(f"{key}: {value}")
+
+    print("=== Этап 2: Получение зависимостей ===")
+    deps = fetch_dependencies(cfg["package_name"], cfg["version"], cfg["repository_url"])
+
+    if deps:
+        print(f"Зависимости пакета {cfg['package_name']} ({cfg['version']}):")
+        for d in deps:
+            print(f" - {d}")
+    else:
+        print("Нет зависимостей или ошибка в запросе")
+
 
 if __name__ == "__main__":
     main()
