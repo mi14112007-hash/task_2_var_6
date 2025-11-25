@@ -1,6 +1,7 @@
 import configparser
 import os
 import sys
+import subprocess
 
 # ===========================
 # Этап 1: Загрузка конфигурации
@@ -121,6 +122,38 @@ def get_load_order(graph, package_name, expected_order=None):
     return order
 
 # ===========================
+# Этап 5: Визуализация графа через Graphviz
+# ===========================
+def visualize_graph(graph, output_file="dependency_graph"):
+    """
+    Строит граф зависимостей и сохраняет изображение в PNG.
+    """
+    dot_content = "digraph G {\n"
+    for pkg, deps in graph.items():
+        for dep in deps:
+            dot_content += f'    "{pkg}" -> "{dep}";\n'
+        if not deps:
+            dot_content += f'    "{pkg}";\n'
+    dot_content += "}"
+
+    dot_file = output_file + ".dot"
+    png_file = output_file + ".png"
+
+    with open(dot_file, "w") as f:
+        f.write(dot_content)
+
+    print(f"DOT файл сохранён как: {dot_file}")
+
+    # Попытка создать PNG с помощью Graphviz
+    try:
+        subprocess.run(["dot", "-Tpng", dot_file, "-o", png_file], check=True)
+        print(f"Граф зависимостей визуализирован: {png_file}")
+    except FileNotFoundError:
+        print("Graphviz не установлен или команда 'dot' недоступна. DOT файл создан, но PNG не сгенерирован.")
+    except subprocess.CalledProcessError:
+        print("❌ Ошибка при генерации PNG через Graphviz.")
+
+# ===========================
 # Главная функция
 # ===========================
 def main():
@@ -138,10 +171,12 @@ def main():
         settings["filter_substring"]
     )
 
-    # Пример эталонного порядка для тестирования
-    # Для реального репозитория можно оставить None
-    expected_order = ['D', 'B', 'E', 'C', 'A']
+    # Этап 4: порядок загрузки
+    expected_order = ['D', 'B', 'E', 'C', 'A']  # пример для тестирования
     get_load_order(graph, settings["package_name"], expected_order)
+
+    # Этап 5: визуализация графа
+    visualize_graph(graph, output_file=f"{settings['package_name']}_graph")
 
 if __name__ == "__main__":
     main()
